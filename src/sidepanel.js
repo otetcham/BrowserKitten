@@ -159,6 +159,14 @@ import {
   setupTaskStreamScrollAffordances
 } from './sidepanel/scroll.js';
 import { I18N, createT } from './sidepanel/i18n.js';
+import {
+  documentLangTag,
+  langToggleLabel,
+  moreLangButtonLabel,
+  nextAppLang,
+  normalizeAppLang,
+  uiText
+} from './sidepanel/appLang.js';
 import { formatTabLeaseMessage, tabLeasePayload } from './sidepanel/tabLeaseUi.js';
 import { createTrajectoryUi } from './sidepanel/trajectoryUi.js';
 import { wirePopoverMenu } from './sidepanel/popoverMenu.js';
@@ -181,9 +189,9 @@ let reasoningEffort = 'none';
 let catalogModels = [];
 /** Resolved theme mirror (source of truth: sidepanel/theme.js) */
 let currentTheme = 'dark';
-let sessions = [{ id: 'session-1', name: '任务 1', messages: [] }];
+let sessions = [{ id: 'session-1', name: 'タスク 1', messages: [] }];
 let activeSessionId = 'session-1';
-let currentLang = 'zh';
+let currentLang = 'ja';
 let pendingAttachments = [];
 let isBackendOnline = false;
 let isAgentRunning = false;
@@ -883,7 +891,7 @@ function applyI18n() {
     if (I18N[currentLang]?.[key] != null) el.title = I18N[currentLang][key];
   });
   const langBtn = $('langToggle');
-  if (langBtn) langBtn.textContent = currentLang === 'zh' ? 'EN' : '中';
+  if (langBtn) langBtn.textContent = langToggleLabel(currentLang);
   updatePickerButtonState(isPickerActive);
   setStatus(isAgentRunning ? 'running' : 'ready');
   syncReasoningSwitch();
@@ -1544,7 +1552,7 @@ function createMentionToken(candidate) {
         : `@${candidate.label}`;
   if (candidate.kind === 'link' && candidate.url) chip.title = String(candidate.url);
   if (candidate.kind === 'artifact' && candidate.id) {
-    chip.title = currentLang === 'en' ? 'Open workspace file' : '打开工作区文件';
+    chip.title = uiText(currentLang, 'Open workspace file', '打开工作区文件');
     chip.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1644,7 +1652,7 @@ function pageCandidateForPastedUrl(url) {
   return {
     kind: 'link',
     id: (`link:${href}`).slice(0, 96),
-    label: abbrevTabTitle('', host) || host || (currentLang === 'en' ? 'Link' : '链接'),
+    label: abbrevTabTitle('', host) || host || (uiText(currentLang, 'Link', '链接')),
     url: href
   };
 }
@@ -1661,7 +1669,7 @@ async function insertPastedUrlChips(urls) {
 
 function insertPastedScreenshotChip(att) {
   if (!att) return;
-  const label = String(att.name || att.handle || (currentLang === 'en' ? 'Screenshot' : '截图'));
+  const label = String(att.name || att.handle || (uiText(currentLang, 'Screenshot', '截图')));
   insertComposerNodesAtCaret([
     createMentionToken({
       kind: 'screenshot',
@@ -1770,8 +1778,8 @@ function moveMentionPalette(delta) {
 }
 
 function setAppLanguage(lang) {
-  currentLang = lang === 'en' ? 'en' : 'zh';
-  document.documentElement.lang = currentLang === 'en' ? 'en' : 'zh-CN';
+  currentLang = normalizeAppLang(lang);
+  document.documentElement.lang = documentLangTag(currentLang);
   chrome.storage.local.set({ app_lang: currentLang });
   applyI18n();
   applyComposerSubmitMode(composerSubmitMode);
@@ -2140,7 +2148,7 @@ function showDraftReadyCard(info) {
 async function confirmRenderDraft(andDownload) {
   const d = activeDraftUi;
   if (!d?.draftId && !d?.artifactId) {
-    showSidepanelToast(currentLang === 'en' ? 'No draft' : '没有草稿', { error: true });
+    showSidepanelToast(uiText(currentLang, 'No draft', '没有草稿'), { error: true });
     return;
   }
   const fmt =
@@ -2151,7 +2159,7 @@ async function confirmRenderDraft(andDownload) {
     if (d.draftId) {
       const draft = await loadDraft(d.draftId);
       if (!draft) {
-        showSidepanelToast(currentLang === 'en' ? 'Draft gone' : '草稿已失效', { error: true });
+        showSidepanelToast(uiText(currentLang, 'Draft gone', '草稿已失效'), { error: true });
         void refreshUnfinishedDraftsList();
         return;
       }
@@ -2213,7 +2221,7 @@ async function confirmRenderDraft(andDownload) {
     }
     const rec = getArtifact(artifactId);
     if (!rec?.bytes) {
-      showSidepanelToast(currentLang === 'en' ? 'Artifact missing' : '文件不存在', { error: true });
+      showSidepanelToast(uiText(currentLang, 'Artifact missing', '文件不存在'), { error: true });
       return;
     }
     const url = bytesToDataUrl(rec.bytes, rec.mime || 'application/octet-stream');
@@ -2226,7 +2234,7 @@ async function confirmRenderDraft(andDownload) {
         }
       );
     });
-    showSidepanelToast(currentLang === 'en' ? 'Download started' : '已开始下载');
+    showSidepanelToast(uiText(currentLang, 'Download started', '已开始下载'));
     if (d.draftId) await purgeDraftAfterDownload(d.draftId);
   } catch (e) {
     showSidepanelToast(e?.message || String(e), { error: true });
@@ -2385,7 +2393,7 @@ async function openUnfinishedDraft(draftId) {
     const draft = await loadDraft(draftId);
     if (!draft) {
       showSidepanelToast(
-        currentLang === 'en' ? 'Draft gone' : '草稿已失效',
+        uiText(currentLang, 'Draft gone', '草稿已失效'),
         { error: true }
       );
       void refreshUnfinishedDraftsList();
@@ -2401,7 +2409,7 @@ async function openUnfinishedDraft(draftId) {
     const res = await openDraftPreviewTab(draft.draftId, { force: true, focus: true, reason: 'user' });
     if (res && res.ok === false) {
       showSidepanelToast(
-        res.message || (currentLang === 'en' ? 'Preview open failed' : '预览打开失败'),
+        res.message || (uiText(currentLang, 'Preview open failed', '预览打开失败')),
         { error: true }
       );
     }
@@ -2492,7 +2500,7 @@ async function refreshAgentStatusBadge() {
   try {
     const settings = await loadLlmSettings();
     if (!settings.apiKey) {
-      statusEl.textContent = currentLang === 'en' ? 'Need API Key' : '需配置 Key';
+      statusEl.textContent = uiText(currentLang, 'Need API Key', '需配置 Key');
       statusEl.title = 'Open ⚙️ Settings to add provider + API key (BYOK · cloud API)';
     } else {
       statusEl.textContent = t('statusReady');
@@ -2591,7 +2599,9 @@ function selectionCountsFrom(elements) {
 }
 
 function itemLabelLang() {
-  return currentLang === 'en' ? 'en' : 'zh';
+  if (currentLang === 'en') return 'en';
+  if (currentLang === 'ja') return 'ja';
+  return 'zh';
 }
 
 function elementLabel(el, index) {
@@ -2621,7 +2631,7 @@ function clipboardGroupFromState(state = workspaceGroupState) {
 
 function groupDisplayName(group) {
   if (isClipboardGroup(group) || group?.kind === CLIPBOARD_GROUP_KIND) {
-    return currentLang === 'en' ? 'Clipboard' : '剪切板';
+    return uiText(currentLang, 'Clipboard', '剪切板');
   }
   return String(group?.name || '').trim();
 }
@@ -3150,9 +3160,9 @@ function renderSelectionUI() {
     } else if (kind === 'table') {
       main = `<span class="kind-mark">${escapeHtml(t('kindTable'))}</span><span class="label">${escapeHtml(label)}</span>`;
     } else if (kind === 'video') {
-      main = `<span class="kind-mark">${currentLang === 'en' ? 'Video' : '视频'}</span><span class="label">${escapeHtml(label)}</span>`;
+      main = `<span class="kind-mark">${uiText(currentLang, 'Video', '视频')}</span><span class="label">${escapeHtml(label)}</span>`;
     } else if (kind === 'link') {
-      main = `<span class="kind-mark">${currentLang === 'en' ? 'Link' : '链接'}</span><span class="label">${escapeHtml(label)}</span>`;
+      main = `<span class="kind-mark">${uiText(currentLang, 'Link', '链接')}</span><span class="label">${escapeHtml(label)}</span>`;
     } else if (kind === 'page') {
       const pageUrl = String(item.pageUrl || item.url || item.href || '').trim();
       chip.title = pageUrl || label;
@@ -3341,7 +3351,7 @@ async function revealCapturedElement(item) {
     }
     const ready = await waitForTabContentScript(tabId, needNav ? 10000 : 4000);
     if (!ready) {
-      showQuickToast(currentLang === 'en' ? 'Could not open that page' : '无法打开该元素所在页面');
+      showQuickToast(uiText(currentLang, 'Could not open that page', '无法打开该元素所在页面'));
       return;
     }
     // SPA views (Gmail categories) paint after the document is already complete.
@@ -3364,7 +3374,7 @@ async function revealCapturedElement(item) {
     }
   } catch (err) {
     console.warn('[selection] reveal failed', err);
-    showQuickToast(currentLang === 'en' ? 'Could not jump to that element' : '无法跳转到该元素');
+    showQuickToast(uiText(currentLang, 'Could not jump to that element', '无法跳转到该元素'));
   }
 }
 
@@ -3464,7 +3474,7 @@ async function togglePickerMode() {
       return;
     }
     console.warn('toggle picker failed', e);
-    showSidepanelToast(currentLang === 'en' ? 'Paw failed — refresh the page' : '伸爪失败，请刷新页面后重试', {
+    showSidepanelToast(uiText(currentLang, 'Paw failed — refresh the page', '伸爪失败，请刷新页面后重试'), {
       error: true
     });
   }
@@ -3863,7 +3873,7 @@ function activeSessionName() {
   const sess = sessions.find((s) => s.id === activeSessionId);
   const raw = String(sess?.name || '').trim();
   if (raw) return raw;
-  return currentLang === 'en' ? 'Task' : '任务';
+  return uiText(currentLang, 'Task', '任务');
 }
 
 function nextLocalTaskName() {
@@ -4108,7 +4118,7 @@ function scheduleSelectionSuggestions() {
   const host = document.getElementById('hintChips');
   if (host) {
     host.innerHTML = `<span class="hint-chips-pending">${
-      currentLang === 'en' ? 'Suggestions after you stop selecting…' : '伸爪结束后将生成建议…'
+      uiText(currentLang, 'Suggestions after you stop selecting…', '伸爪结束后将生成建议…')
     }</span>`;
   }
   suggestionDebounceTimer = setTimeout(() => {
@@ -4128,7 +4138,7 @@ async function inferSelectionHintChips(token) {
   const host = document.getElementById('hintChips');
   if (host) {
     host.innerHTML = `<span class="hint-chips-pending">${
-      currentLang === 'en' ? 'Inferring from your selection…' : '正在根据选区推断…'
+      uiText(currentLang, 'Inferring from your selection…', '正在根据选区推断…')
     }</span>`;
   }
   if (isCurrentSessionRunning()) {
@@ -4665,7 +4675,7 @@ function renderSessionRailList() {
       btn.classList.add('is-running');
       const mark = document.createElement('span');
       mark.className = 'session-rail-running';
-      mark.setAttribute('aria-label', currentLang === 'en' ? 'Running' : '进行中');
+      mark.setAttribute('aria-label', uiText(currentLang, 'Running', '进行中'));
       btn.appendChild(mark);
     }
     btn.addEventListener('click', () => {
@@ -4675,8 +4685,8 @@ function renderSessionRailList() {
     const rename = document.createElement('button');
     rename.type = 'button';
     rename.className = 'session-rail-item-rename-btn';
-    rename.setAttribute('aria-label', t('renameSession') || (currentLang === 'en' ? 'Rename' : '重命名'));
-    rename.title = t('renameSession') || (currentLang === 'en' ? 'Rename' : '重命名');
+    rename.setAttribute('aria-label', t('renameSession') || (uiText(currentLang, 'Rename', '重命名')));
+    rename.title = t('renameSession') || (uiText(currentLang, 'Rename', '重命名'));
     rename.innerHTML = ICONS.pencil;
     rename.addEventListener('click', (e) => {
       e.preventDefault();
@@ -4686,8 +4696,8 @@ function renderSessionRailList() {
     const close = document.createElement('button');
     close.type = 'button';
     close.className = 'session-rail-item-close';
-    close.setAttribute('aria-label', currentLang === 'en' ? 'Delete task' : '删除任务');
-    close.title = currentLang === 'en' ? 'Delete this task workspace' : '删除此任务工作区';
+    close.setAttribute('aria-label', uiText(currentLang, 'Delete task', '删除任务'));
+    close.title = uiText(currentLang, 'Delete this task workspace', '删除此任务工作区');
     close.textContent = '×';
     close.addEventListener('click', (e) => {
       e.preventDefault();
@@ -4742,8 +4752,8 @@ function beginSessionRailRename(sessionId) {
   input.className = 'session-rail-item-rename';
   input.maxLength = SESSION_TITLE_MAX;
   input.value = prev;
-  input.placeholder = t('sessionNamePlaceholder') || (currentLang === 'en' ? 'Session name' : '会话名称');
-  input.setAttribute('aria-label', t('renameSession') || (currentLang === 'en' ? 'Rename' : '重命名'));
+  input.placeholder = t('sessionNamePlaceholder') || (uiText(currentLang, 'Session name', '会话名称'));
+  input.setAttribute('aria-label', t('renameSession') || (uiText(currentLang, 'Rename', '重命名')));
   input.autocomplete = 'off';
   input.spellcheck = false;
   row.classList.add('is-renaming');
@@ -5181,7 +5191,7 @@ function mountSessionTrajectoryButton(task) {
       openTrajectoryExportModal();
     });
   }
-  btn.textContent = currentLang === 'en' ? 'Traj' : '轨迹';
+  btn.textContent = uiText(currentLang, 'Traj', '轨迹');
   btn.title =
     currentLang === 'en'
       ? 'Dev: download this task tool path'
@@ -5276,7 +5286,7 @@ async function deleteSessionById(sessionId, sessionName) {
     currentLang === 'en'
       ? `Delete task “${label}”? Messages and workspace files will be removed. Selection groups are kept.`
       : `删除任务「${label}」？消息和工作区文件将被清除，Selection Group 会保留。`,
-    currentLang === 'en' ? 'Delete task' : '删除任务',
+    uiText(currentLang, 'Delete task', '删除任务'),
     { danger: true }
   );
   if (!ok) return;
@@ -5301,7 +5311,7 @@ async function deleteSessionById(sessionId, sessionName) {
     sessions = [
       {
         id,
-        name: currentLang === 'en' ? 'Task 1' : '任务 1',
+        name: uiText(currentLang, 'Task 1', '任务 1'),
         messages: []
       }
     ];
@@ -6670,7 +6680,7 @@ function handleSessionWorkspaceEvent(request) {
       const leaseNote = humanizeTabLeaseEvent(ev);
       const msg = leaseNote || streamEventText(ev.message) || String(ev.message || '').trim();
       if (msg && !liveTurnSealed) {
-        const prefix = currentLang === 'en' ? '**Error:** ' : '**错误:** ';
+        const prefix = uiText(currentLang, '**Error:** ', '**错误:** ');
         const painted = msg.startsWith('**') ? msg : `${prefix}${msg}`;
         liveTurnAnswerText = painted;
         renderLiveTurnAnswer(painted);
@@ -6704,7 +6714,7 @@ function handleSessionWorkspaceEvent(request) {
       if (leaseNote) {
         showQuickToast(leaseNote);
         if (!liveTurnSealed) {
-          const prefix = currentLang === 'en' ? '**Notice:** ' : '**提示:** ';
+          const prefix = uiText(currentLang, '**Notice:** ', '**提示:** ');
           liveTurnAnswerText = `${prefix}${leaseNote}`;
           renderLiveTurnAnswer(liveTurnAnswerText);
         }
@@ -7084,7 +7094,7 @@ async function submitUserPrompt(mode = 'chat', queuedTurn = null) {
       }
       const finalText =
         String(workspaceResult?.finalText || workspaceResult?.assistant?.content || '').trim() ||
-        (currentLang === 'en' ? '(empty reply)' : '（空回复）');
+        (uiText(currentLang, '(empty reply)', '（空回复）'));
       const sealed = promoteFinalAnswer(finalText, { force: true }) || {};
       const thoughtText = String(sealed.thought || workspaceResult?.thought || '').trim();
       applyTaskUiStatus('verified');
@@ -7402,7 +7412,7 @@ function askUserViaPopcard(container, question, options = [], opts = {}) {
     });
 
     abortHandler = () => {
-      const stoppedLabel = currentLang === 'en' ? 'Stopped' : '已停止';
+      const stoppedLabel = uiText(currentLang, 'Stopped', '已停止');
       try {
         if (popHost) settlePopCardHost(popHost, stoppedLabel);
       } catch (_) {}
@@ -7450,8 +7460,8 @@ function askUserViaPopcard(container, question, options = [], opts = {}) {
       }
     } else {
       showCustomModal({
-        title: question || (currentLang === 'en' ? 'Please clarify' : '请补充说明'),
-        placeholder: currentLang === 'en' ? 'Your answer…' : '输入您的回答...',
+        title: question || (uiText(currentLang, 'Please clarify', '请补充说明')),
+        placeholder: uiText(currentLang, 'Your answer…', '输入您的回答...'),
         initialValue: '',
         onConfirm: (val) => {
           finish(val || '');
@@ -7630,7 +7640,7 @@ function setupCoreEventListeners() {
   });
   applyComposerSubmitMode(composerSubmitMode);
   $('langToggle')?.addEventListener('click', () => {
-    setAppLanguage(currentLang === 'zh' ? 'en' : 'zh');
+    setAppLanguage(nextAppLang(currentLang));
   });
   $('themeToggleBtn')?.addEventListener('click', () => {
     cycleThemeMode();
@@ -7639,23 +7649,28 @@ function setupCoreEventListeners() {
   $('gearBtn')?.addEventListener('click', () => openAgentSettingsModal());
   // More sheet consolidates lang / theme / settings (topbar only keeps ⋯)
   $('moreLangBtn')?.addEventListener('click', () => {
-    setAppLanguage(currentLang === 'zh' ? 'en' : 'zh');
+    setAppLanguage(nextAppLang(currentLang));
     const b = $('moreLangBtn');
-    if (b) b.textContent = currentLang === 'zh' ? '语言 · 中文' : 'Language · EN';
+    if (b) b.textContent = moreLangButtonLabel(currentLang);
   });
   $('moreThemeBtn')?.addEventListener('click', () => {
     cycleThemeMode();
     currentTheme = getResolvedTheme();
     const b = $('moreThemeBtn');
     if (b) {
-      b.textContent =
-        currentTheme === 'light'
-          ? currentLang === 'en'
-            ? 'Theme · Light'
-            : '主题 · 浅色'
-          : currentLang === 'en'
-            ? 'Theme · Dark'
-            : '主题 · 深色';
+      const light =
+        currentLang === 'en'
+          ? 'Theme · Light'
+          : currentLang === 'zh'
+            ? '主题 · 浅色'
+            : 'テーマ · ライト';
+      const dark =
+        currentLang === 'en'
+          ? 'Theme · Dark'
+          : currentLang === 'zh'
+            ? '主题 · 深色'
+            : 'テーマ · ダーク';
+      b.textContent = currentTheme === 'light' ? light : dark;
     }
   });
   $('moreSettingsBtn')?.addEventListener('click', () => {
@@ -8422,7 +8437,7 @@ function artifactFolderUiLabel(folderId, shelf) {
     sites: 'artifactFolderSites',
     files: 'artifactFolderFiles'
   };
-  return keys[folderId] ? t(keys[folderId]) : shelfFolderLabel(folderId, currentLang === 'en' ? 'en' : 'zh', shelf?.labels);
+  return keys[folderId] ? t(keys[folderId]) : shelfFolderLabel(folderId, uiText(currentLang, 'en', 'zh'), shelf?.labels);
 }
 
 function artifactFolderCollapsed(sessionId, folderId) {
@@ -8605,7 +8620,7 @@ function pulseArtifactBadge() {
 async function openArtifactPreviewIds(ids) {
   const artifactIds = [...new Set((ids || []).map(String).filter(Boolean))];
   if (!artifactIds.length) {
-    showQuickToast(currentLang === 'en' ? 'Select files first' : '请先勾选工作区文件');
+    showQuickToast(uiText(currentLang, 'Select files first', '请先勾选工作区文件'));
     return;
   }
   try {
@@ -8618,7 +8633,7 @@ async function openArtifactPreviewIds(ids) {
       title: activeSessionName()
     });
     if (res && res.ok === false) {
-      showQuickToast(res.message || (currentLang === 'en' ? 'Could not open preview' : '无法打开预览'));
+      showQuickToast(res.message || (uiText(currentLang, 'Could not open preview', '无法打开预览')));
     }
   } catch (err) {
     showQuickToast(err instanceof Error ? err.message : String(err));
@@ -8702,7 +8717,7 @@ async function deleteSessionArtifact(artifactId) {
       artifactId
     });
     await refreshArtifactShelf();
-    showQuickToast(currentLang === 'en' ? 'Removed from workspace' : '已从工作区删除');
+    showQuickToast(uiText(currentLang, 'Removed from workspace', '已从工作区删除'));
   } catch (err) {
     showQuickToast(err instanceof Error ? err.message : String(err));
   }
@@ -8759,7 +8774,7 @@ function renderWorkspaceGroupControls() {
     activeSelect.innerHTML = '';
     const none = document.createElement('option');
     none.value = '';
-    none.textContent = currentLang === 'en' ? 'No group' : '未选择组';
+    none.textContent = uiText(currentLang, 'No group', '未选择组');
     none.selected = preferNone;
     activeSelect.appendChild(none);
     for (const group of groups) {
@@ -8775,7 +8790,7 @@ function renderWorkspaceGroupControls() {
   const labelEl = $('groupSelectLabel');
   if (labelEl) {
     if (preferNone || !activeGroup) {
-      labelEl.textContent = currentLang === 'en' ? 'No group' : '未选择组';
+      labelEl.textContent = uiText(currentLang, 'No group', '未选择组');
     } else {
       const n = activeGroup.itemCount || 0;
       labelEl.textContent = n > 0 ? `${activeGroup.name} · ${n}` : activeGroup.name;
@@ -8793,7 +8808,7 @@ function renderWorkspaceGroupControls() {
     noneRow.setAttribute('role', 'option');
     noneRow.setAttribute('aria-selected', preferNone ? 'true' : 'false');
     noneRow.dataset.groupId = '';
-    noneRow.innerHTML = `<span class="group-select-item-name">${currentLang === 'en' ? 'No group' : '未选择组'}</span>`;
+    noneRow.innerHTML = `<span class="group-select-item-name">${uiText(currentLang, 'No group', '未选择组')}</span>`;
     noneRow.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -8812,7 +8827,7 @@ function renderWorkspaceGroupControls() {
       const ren = document.createElement('button');
       ren.type = 'button';
       ren.className = 'group-select-item-rename';
-      ren.title = currentLang === 'en' ? 'Rename group' : '重命名组';
+      ren.title = uiText(currentLang, 'Rename group', '重命名组');
       ren.setAttribute('aria-label', currentLang === 'en' ? `Rename ${group.name}` : `重命名 ${group.name}`);
       ren.innerHTML =
         '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
@@ -8835,7 +8850,7 @@ function renderWorkspaceGroupControls() {
       const del = document.createElement('button');
       del.type = 'button';
       del.className = 'group-select-item-del';
-      del.title = currentLang === 'en' ? 'Delete group' : '删除组';
+      del.title = uiText(currentLang, 'Delete group', '删除组');
       del.setAttribute('aria-label', currentLang === 'en' ? `Delete ${group.name}` : `删除 ${group.name}`);
       del.textContent = '×';
       del.addEventListener('click', (e) => {
@@ -8876,7 +8891,7 @@ function renderWorkspaceGroupControls() {
     if (!allGroups.length) {
       const empty = document.createElement('div');
       empty.className = 'session-bind-add-empty';
-      empty.textContent = currentLang === 'en' ? 'No groups yet' : '还没有 Group';
+      empty.textContent = uiText(currentLang, 'No groups yet', '还没有 Group');
       listEl.appendChild(empty);
     } else {
       const clip = allGroups.filter((g) => isClipboardGroup(g) || g.kind === CLIPBOARD_GROUP_KIND);
@@ -8970,7 +8985,7 @@ async function createCaptureGroup() {
   }
   const defaultName = nextGroupName(existingGroupNames());
   const name = await promptInApp(
-    currentLang === 'en' ? 'New group name' : '新建 Group 名称',
+    uiText(currentLang, 'New group name', '新建 Group 名称'),
     defaultName,
     defaultName,
     (val) => groupNameConflict(val)
@@ -9001,7 +9016,7 @@ async function createCaptureGroup() {
 async function renameGroupById(groupId, currentName) {
   if (!groupId) return;
   const name = await promptInApp(
-    currentLang === 'en' ? 'Rename group' : '重命名 Group',
+    uiText(currentLang, 'Rename group', '重命名 Group'),
     currentName || '',
     currentName || '',
     (val) => groupNameConflict(val, groupId)
@@ -9041,7 +9056,7 @@ async function deleteGroupById(groupId, name) {
     currentLang === 'en'
       ? `Delete group “${name || groupId}”? This cannot be undone.`
       : `删除 Group「${name || groupId}」？此操作无法撤销。`,
-    currentLang === 'en' ? 'Delete group' : '删除 Group',
+    uiText(currentLang, 'Delete group', '删除 Group'),
     { danger: true }
   );
   if (!ok) return;
@@ -9725,11 +9740,11 @@ function confirmInApp(message, title, opts = {}) {
   return new Promise((resolve) => {
     showCustomModal({
       mode: 'confirm',
-      title: title || (currentLang === 'en' ? 'Confirm' : '请确认'),
+      title: title || (uiText(currentLang, 'Confirm', '请确认')),
       message,
       danger: !!opts.danger,
       confirmLabel: opts.confirmLabel || (opts.danger
-        ? (currentLang === 'en' ? 'Delete' : '删除')
+        ? (uiText(currentLang, 'Delete', '删除'))
         : ''),
       onConfirm: () => resolve(true),
       onCancel: () => resolve(false)
@@ -9781,7 +9796,7 @@ function showCustomModal({
   }
 
   const isConfirm = mode === 'confirm';
-  titleEl.innerText = title || (currentLang === 'en' ? 'Confirm' : '请确认');
+  titleEl.innerText = title || (uiText(currentLang, 'Confirm', '请确认'));
   inputEl.placeholder = placeholder || '';
   inputEl.value = initialValue || '';
   inputEl.hidden = isConfirm;
@@ -9797,8 +9812,8 @@ function showCustomModal({
   confirmBtn.classList.toggle('btn-danger', !!danger);
   confirmBtn.classList.toggle('btn-primary', !danger);
   confirmBtn.textContent =
-    confirmLabel || (currentLang === 'en' ? 'Confirm' : '确认');
-  cancelBtn.textContent = cancelLabel || (currentLang === 'en' ? 'Cancel' : '取消');
+    confirmLabel || (uiText(currentLang, 'Confirm', '确认'));
+  cancelBtn.textContent = cancelLabel || (uiText(currentLang, 'Cancel', '取消'));
 
   let settled = false;
 
@@ -10058,9 +10073,9 @@ function setPageListenState(state, host = '') {
     const shown = String(host || '').trim();
     label.textContent =
       state === 'ok'
-        ? shown || (currentLang === 'en' ? 'On page' : '当前页')
+        ? shown || (uiText(currentLang, 'On page', '当前页'))
         : state === 'editor'
-          ? shown || (currentLang === 'en' ? 'Editor' : '编辑器')
+          ? shown || (uiText(currentLang, 'Editor', '编辑器'))
           : state === 'bad'
             ? currentLang === 'en'
               ? 'No page'
@@ -10273,6 +10288,12 @@ const AGENT_TASK_STATUS_LABELS = {
     claimed_done: 'Claimed done',
     verified: 'Verified',
     failed: 'Failed'
+  },
+  ja: {
+    running: '実行中',
+    claimed_done: '完了宣言',
+    verified: '検証済み',
+    failed: '失敗'
   }
 };
 
@@ -10283,7 +10304,7 @@ const AGENT_TASK_STATUS_LABELS = {
  */
 function agentTaskStatusLabel(status) {
   const key = String(status || '').toLowerCase();
-  const dict = AGENT_TASK_STATUS_LABELS[currentLang] || AGENT_TASK_STATUS_LABELS.zh;
+  const dict = AGENT_TASK_STATUS_LABELS[currentLang] || AGENT_TASK_STATUS_LABELS.ja;
   return dict[key] || dict.claimed_done || String(status || '');
 }
 
@@ -10493,14 +10514,14 @@ function showArtifactPreviewModal(ev, opts = {}) {
   const cancelBtn = document.getElementById('artifactPreviewCancelBtn');
 
   if (titleEl) {
-    titleEl.textContent = currentLang === 'en' ? 'Artifact preview' : '产物预览';
+    titleEl.textContent = uiText(currentLang, 'Artifact preview', '产物预览');
   }
   if (metaEl) {
     const parts = [name, mime, formatArtifactSize(size)];
     if (kind) parts.push(kind);
     if (ev?.artifactId) parts.push(`id:${String(ev.artifactId).slice(0, 24)}`);
     if (alreadyDownloaded) {
-      parts.push(currentLang === 'en' ? 'already downloaded' : '已下载');
+      parts.push(uiText(currentLang, 'already downloaded', '已下载'));
     }
     metaEl.textContent = parts.join(' · ');
   }
@@ -10508,15 +10529,15 @@ function showArtifactPreviewModal(ev, opts = {}) {
 
   if (confirmBtn) {
     if (alreadyDownloaded && dataUrl) {
-      confirmBtn.textContent = currentLang === 'en' ? 'Download again' : '重新下载';
+      confirmBtn.textContent = uiText(currentLang, 'Download again', '重新下载');
       confirmBtn.style.display = '';
     } else if (requireConfirm && dataUrl) {
-      confirmBtn.textContent = currentLang === 'en' ? 'Confirm download' : '确认下载';
+      confirmBtn.textContent = uiText(currentLang, 'Confirm download', '确认下载');
       confirmBtn.style.display = '';
     } else if (requireConfirm && !dataUrl) {
       confirmBtn.style.display = 'none';
     } else {
-      confirmBtn.textContent = currentLang === 'en' ? 'Close' : '关闭';
+      confirmBtn.textContent = uiText(currentLang, 'Close', '关闭');
       confirmBtn.style.display = '';
     }
   }
@@ -10566,7 +10587,7 @@ function setupArtifactPreviewModal() {
       );
     } else {
       showSidepanelToast(
-        currentLang === 'en' ? 'No download payload' : '无下载数据',
+        uiText(currentLang, 'No download payload', '无下载数据'),
         { error: true }
       );
     }
@@ -10773,20 +10794,20 @@ function attachGeneratedImageToPending(payload) {
     const dup = pendingAttachments.find((a) => a.isImage && a.dataUrl === att.dataUrl);
     if (dup) {
       showSidepanelToast(
-        currentLang === 'en' ? 'Already in chat attachments' : '已在聊天附件中'
+        uiText(currentLang, 'Already in chat attachments', '已在聊天附件中')
       );
       return true;
     }
     pendingAttachments.push(att);
     renderAttachmentPreviews();
     showSidepanelToast(
-      currentLang === 'en' ? 'Added to chat attachments' : '已加入聊天附件'
+      uiText(currentLang, 'Added to chat attachments', '已加入聊天附件')
     );
     return true;
   } catch (e) {
     console.warn('[IG-5] attach failed', e);
     showSidepanelToast(
-      currentLang === 'en' ? 'Failed to attach image' : '加入附件失败',
+      uiText(currentLang, 'Failed to attach image', '加入附件失败'),
       { error: true }
     );
     return false;
@@ -10825,7 +10846,7 @@ function setupImageGenPreviewModal() {
       lastGeneratedImage.url,
       lastGeneratedImage.downloadName
     );
-    showSidepanelToast(currentLang === 'en' ? 'Download started' : '已开始下载');
+    showSidepanelToast(uiText(currentLang, 'Download started', '已开始下载'));
   });
   document.getElementById('imageGenAttachBtn')?.addEventListener('click', () => {
     if (!lastGeneratedImage) return;
@@ -10868,7 +10889,7 @@ function showImageGenPreview(ev) {
   const title = document.getElementById('imageGenPreviewTitle');
   if (title) {
     title.textContent =
-      currentLang === 'en' ? 'Generated image' : '生成的图片';
+      uiText(currentLang, 'Generated image', '生成的图片');
   }
   if (img) {
     img.src = src;
@@ -10890,9 +10911,9 @@ function showImageGenPreview(ev) {
   const attachBtn = document.getElementById('imageGenAttachBtn');
   const dlBtn = document.getElementById('imageGenDownloadBtn');
   const doneBtn = document.getElementById('imageGenPreviewDoneBtn');
-  if (attachBtn) attachBtn.textContent = currentLang === 'en' ? 'Add to chat' : '加入附件';
-  if (dlBtn) dlBtn.textContent = currentLang === 'en' ? 'Download' : '下载';
-  if (doneBtn) doneBtn.textContent = currentLang === 'en' ? 'Done' : '完成';
+  if (attachBtn) attachBtn.textContent = uiText(currentLang, 'Add to chat', '加入附件');
+  if (dlBtn) dlBtn.textContent = uiText(currentLang, 'Download', '下载');
+  if (doneBtn) doneBtn.textContent = uiText(currentLang, 'Done', '完成');
 
   if (overlay) {
     overlay.style.display = 'flex';
@@ -10914,7 +10935,7 @@ function handleImageGeneratedEvent(ev) {
   if (status !== 'success' || !landed) {
     const msg =
       (ev.message && String(ev.message).trim()) ||
-      (currentLang === 'en' ? 'Image generation failed' : '图像生成失败');
+      (uiText(currentLang, 'Image generation failed', '图像生成失败'));
     showSidepanelToast(msg, { error: true, ms: 3600 });
     return;
   }
@@ -11007,7 +11028,7 @@ function openTrajectoryExportModal() {
   }
   const activeSess = sessions.find((s) => s.id === activeSessionId);
   if (!activeSess) {
-    showSidepanelToast(currentLang === 'en' ? 'No active task' : '无当前任务', {
+    showSidepanelToast(uiText(currentLang, 'No active task', '无当前任务'), {
       error: true
     });
     return;
@@ -11056,7 +11077,7 @@ async function downloadCurrentConversationTrajectory({
   try {
     const activeSess = sessions.find((s) => s.id === activeSessionId);
     if (!activeSess) {
-      showSidepanelToast(currentLang === 'en' ? 'No task' : '无任务', { error: true });
+      showSidepanelToast(uiText(currentLang, 'No task', '无任务'), { error: true });
       return;
     }
     ensureSessionTrajectory(activeSess);
@@ -11105,7 +11126,7 @@ async function downloadCurrentConversationTrajectory({
   } catch (e) {
     console.error('[PageWand] trajectory export failed', e);
     showSidepanelToast(
-      (currentLang === 'en' ? 'Export failed: ' : '导出失败: ') + (e?.message || e),
+      (uiText(currentLang, 'Export failed: ', '导出失败: ')) + (e?.message || e),
       { error: true }
     );
   }
@@ -13519,7 +13540,7 @@ async function attachScreenshotToChat(payload) {
     lastCaptureAttachAt = 0;
     console.error('[CAPTURE_WP] attach failed', err);
     showCustomModal({
-      title: currentLang === 'en' ? 'Screenshot' : '截图',
+      title: uiText(currentLang, 'Screenshot', '截图'),
       placeholder: '',
       initialValue:
         currentLang === 'en'
@@ -13552,7 +13573,7 @@ async function requestUserScreenshot(source = 'button') {
     }
     const errMsg = result?.error || 'unknown error';
     showCustomModal({
-      title: currentLang === 'en' ? 'Screenshot' : '截图',
+      title: uiText(currentLang, 'Screenshot', '截图'),
       placeholder: '',
       initialValue:
         currentLang === 'en'
@@ -13562,7 +13583,7 @@ async function requestUserScreenshot(source = 'button') {
     });
   } catch (err) {
     showCustomModal({
-      title: currentLang === 'en' ? 'Screenshot' : '截图',
+      title: uiText(currentLang, 'Screenshot', '截图'),
       placeholder: '',
       initialValue:
         currentLang === 'en'

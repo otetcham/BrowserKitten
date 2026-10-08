@@ -10,15 +10,19 @@ export function officeUiLang() {
   try {
     const s = String(localStorage.getItem(KEY) || localStorage.getItem(LEGACY_SHEET_KEY) || '').toLowerCase();
     if (s === 'en' || s === 'en-us') return 'en';
+    if (s === 'ja' || s === 'ja-jp') return 'ja';
     if (s === 'zh' || s === 'zh-cn') return 'zh';
   } catch {
     /* */
   }
-  return /en/i.test(navigator.language || '') ? 'en' : 'zh';
+  const nav = String(navigator.language || '').toLowerCase();
+  if (/^ja/.test(nav)) return 'ja';
+  if (/^en/.test(nav)) return 'en';
+  return 'ja';
 }
 
 export function persistOfficeUiLang(lang) {
-  const v = lang === 'en' ? 'en' : 'zh';
+  const v = lang === 'en' ? 'en' : lang === 'zh' ? 'zh' : 'ja';
   try {
     localStorage.setItem(KEY, v);
     localStorage.setItem(LEGACY_SHEET_KEY, v);
@@ -29,7 +33,8 @@ export function persistOfficeUiLang(lang) {
 
 export function applyOfficeDocumentLang(lang) {
   try {
-    document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+    document.documentElement.lang =
+      lang === 'en' ? 'en' : lang === 'zh' ? 'zh-CN' : 'ja';
   } catch {
     /* */
   }

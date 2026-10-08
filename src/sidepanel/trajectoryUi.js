@@ -4,6 +4,7 @@
  */
 
 import { mergeSessionTranscriptMessages } from './sessionIsolation.js';
+import { uiText } from './appLang.js';
 
 /**
  * @typedef {object} TrajectoryUiDeps
@@ -67,12 +68,14 @@ export function createTrajectoryUi(deps) {
    * @param {{ thoughtText?: string, title?: string }} [extra]
    */
   async function downloadTaskTrajectory(runId, extra = {}) {
-    const currentLang = deps.getLang?.() || 'zh';
+    const currentLang = deps.getLang?.() || 'ja';
     if (!deps.isExportEnabled?.()) {
       deps.showToast(
-        currentLang === 'en'
-          ? 'Trajectory export disabled in Settings'
-          : '轨迹导出未启用 — 请在 ⚙️ 设置中开启「开发者：启用轨迹导出」',
+        uiText(
+          currentLang,
+          'Trajectory export disabled in Settings',
+          '轨迹导出未启用 — 请在 ⚙️ 设置中开启「开发者：启用轨迹导出」'
+        ),
         { error: true }
       );
       return;
@@ -81,7 +84,7 @@ export function createTrajectoryUi(deps) {
     const activeSessionId = deps.getActiveSessionId?.();
     const activeSess = sessions.find((s) => s.id === activeSessionId);
     if (!activeSess) {
-      deps.showToast(currentLang === 'en' ? 'No task' : '无任务', { error: true });
+      deps.showToast(uiText(currentLang, 'No task', '无任务'), { error: true });
       return;
     }
     try {
@@ -117,10 +120,11 @@ export function createTrajectoryUi(deps) {
       const sid = String(activeSess.id || runId || 'session').replace(/[^\w.-]+/g, '_').slice(0, 40);
       const filename = `pagewand-trajectory-${sid}.json`;
       const s = doc.summary || {};
-      const doneMsg =
-        currentLang === 'en'
-          ? `Trajectory downloaded (${s.turns || 0} turns, ${s.tools || 0} tools)`
-          : `轨迹已下载（${s.turns || 0} 轮 · ${s.tools || 0} 次工具）`;
+      const doneMsg = uiText(
+        currentLang,
+        `Trajectory downloaded (${s.turns || 0} turns, ${s.tools || 0} tools)`,
+        `轨迹已下载（${s.turns || 0} 轮 · ${s.tools || 0} 次工具）`
+      );
       const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
 
       const dataUrl =
@@ -143,7 +147,7 @@ export function createTrajectoryUi(deps) {
                 deps.showToast(doneMsg);
               } catch (e2) {
                 deps.showToast(
-                  (currentLang === 'en' ? 'Download failed: ' : '下载失败: ') +
+                  uiText(currentLang, 'Download failed: ', '下载失败: ') +
                     (chrome.runtime.lastError.message || e2?.message || e2),
                   { error: true }
                 );
@@ -169,7 +173,7 @@ export function createTrajectoryUi(deps) {
     } catch (e) {
       console.warn('[PageWand] task trajectory download failed', e);
       deps.showToast(
-        currentLang === 'en' ? 'Download failed' : '下载失败: ' + (e?.message || e),
+        uiText(currentLang, 'Download failed', '下载失败: ' + (e?.message || e)),
         { error: true }
       );
     }

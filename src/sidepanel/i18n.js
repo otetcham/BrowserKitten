@@ -3,6 +3,8 @@
  * Orchestrator (sidepanel.js) owns `currentLang`; pass a getter into createT().
  */
 
+import { I18N_JA } from './i18nJa.generated.js';
+
 export const I18N = {
   zh: {
     brandName: '爪爪',
@@ -553,7 +555,8 @@ export const I18N = {
     apiProbeImageBtn: 'Probe images',
     apiProbeImageOk: '✓ Reachable · {n} image models',
     apiProbeImageNone: 'API is reachable, but no image models were detected. You can type an id.'
-  }
+  },
+  ja: I18N_JA
 };
 
 /**
@@ -561,7 +564,7 @@ export const I18N = {
  * @returns {Record<string, string>}
  */
 export function getDict(lang) {
-  return I18N[lang] || I18N.zh;
+  return I18N[lang] || I18N.ja;
 }
 
 /**
@@ -571,7 +574,7 @@ export function getDict(lang) {
  * @returns {string}
  */
 export function translate(lang, key) {
-  return (I18N[lang] && I18N[lang][key]) || I18N.zh[key] || key;
+  return (I18N[lang] && I18N[lang][key]) || I18N.ja[key] || I18N.en[key] || key;
 }
 
 /**

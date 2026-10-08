@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "爪爪 · 完全解放版",
+  "name": "BrowserKitten",
   "version": "1.1.0",
-  "description": "爪爪 · 完全解放版 — 开发者模式本地实验：把已登录浏览器当成可编程层（live-page action；run 内 sys）。不面向 CWS，不出售。",
+  "description": "BrowserKitten — 開発者モード向け: ログイン済み Chrome をプログラム可能な層として使う（live-page action、run 内 sys）。CWS 非公開。",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
@@ -32,14 +32,14 @@
         "default": "Alt+Shift+S",
         "mac": "Alt+Shift+S"
       },
-      "description": "开启/关闭 伸爪（页面点选）"
+      "description": "パウ選択（ページ点选）のオン/オフ"
     },
     "capture-screenshot": {
       "suggested_key": {
         "default": "Alt+Shift+C",
         "mac": "Alt+Shift+C"
       },
-      "description": "区域截图 → 剪贴板 + 对话附件"
+      "description": "範囲スクリーンショット → クリップボード + チャット添付"
     }
   },
   "side_panel": {
@@ -77,7 +77,7 @@
     }
   ],
   "action": {
-    "default_title": "打开 爪爪 · 完全解放版",
+    "default_title": "BrowserKitten を開く",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",

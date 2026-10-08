@@ -35,6 +35,18 @@ const EN_NOUN = {
   page: 'Page'
 };
 
+const JA_NOUN = {
+  image: '画像',
+  screenshot: 'スクショ',
+  text: 'テキスト',
+  table: '表',
+  video: '動画',
+  link: 'リンク',
+  vector: 'ベクター',
+  container: 'テキスト',
+  page: 'ページ'
+};
+
 const KIND_ALIASES = {
   image: ['image', 'img', 'pic', 'photo', '图片', '图像', '图'],
   screenshot: ['screenshot', 'screen', 'shot', 'capture', '截图'],
@@ -90,6 +102,7 @@ export function formatItemLabel(kind, n, lang = 'zh') {
   const k = normalizeLabelKind(kind) || 'text';
   const num = Math.max(1, Math.floor(Number(n) || 0));
   if (lang === 'en') return `${EN_NOUN[k]} ${num}`;
+  if (lang === 'ja') return `${JA_NOUN[k]}${num}`;
   return `${ZH_NOUN[k]}${num}`;
 }
 
